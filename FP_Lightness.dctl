@@ -1,0 +1,40 @@
+//Applies Fairchild-Pirrotta Lightness compensation. Makes colors look more even in brightness.
+
+//CIELAB input, CIELAB output.
+
+//If you have a color managed timeline(appropriate timeline color pace setting), you can
+//use the color space setting in the node context menu to convert. Otherwise, use CST OFX.
+
+#define PI 3.14159265359
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B)
+{
+	float3 lab = make_float3(p_R, p_G, p_B);
+	
+    
+    //Convert CIELAB to LCHab
+    //http://www.brucelindbloom.com/index.html?Eqn_Lab_to_LCH.html
+    
+    float c = _sqrtf(lab.y * lab.y + lab.z * lab.z);
+    float h = _atan2f(lab.z, lab.y);
+    
+    if(h < 0.0)
+    {
+        h = h + 2 * PI;
+    }
+    
+    float3 lch = make_float3(lab.x, c, h);
+    
+	
+	//Calculate Fairchild-Pirrotta Lightness
+	//https://www.academia.edu/13506981/Predicting_the_lightness_of_chromatic_object_colors_using_CIELAB	
+	
+	float f1 = 0.116 * _fabs(_sinf((lch.z - 0.5 * PI) / 2.0)) + 0.085; //HK magnitude
+    float f2 = _fmaxf(0, 2.5 - 0.025 * lch.x); //lightness ratio adjustment 
+    
+    float L_fp = (lch.x + f2 * f1 * lch.y);
+    L_fp = L_fp - (57.0f / 255.0f); //experimentally determined offset to keep black at 0.
+	
+	
+	return make_float3(L_fp, lab.y, lab.z);
+}
