@@ -1,0 +1,64 @@
+
+
+__DEVICE__ float3 XYZ_to_Luv(float3 c, float3 w)
+{
+	
+	float yr = c.y / w.y;
+	
+	float u_prime = (4.f * c.x) / (c.x + 15.f * c.y + 3.f * c.z);
+	
+	float v_prime = (9.f * c.y) / (c.x + 15.f * c.y + 3.f * c.z);
+	
+	float ur_prime = (4.f * w.x) / (w.x + 15.f * w.y + 3.f * w.z);
+	
+	float vr_prime = (9.f * w.y) / (w.x + 15.f * w.y + 3.f * w.z);
+	
+	float e = 216.f / 24389.f;
+	
+	float k = 24389.f / 27.f;
+	
+	float L;
+	
+	if (yr > e)
+	{
+		L = 116.f * _powf(yr, (1.f/3.f)) - 16.f;
+	}	
+	else 
+	{
+		L = k * yr;
+	}
+	
+	float u = 13.f * L * (u_prime - ur_prime);
+	
+	float v = 13.f * L * (v_prime - vr_prime);
+	
+	return make_float3(L, u, v);
+}
+
+__DEVICE__ float3 Luv_to_LCHuv(float3 c)
+{
+	float C = _sqrtf((c.y * c.y) + (c.z * c.z));
+	
+	float at_vu = _atan2f(c.z, c.y);
+	
+	if (at_vu < 0.f)
+	{
+		at_vu = at_vu + 6.28318f;
+	}
+
+	return make_float3(c.x, C, at_vu);
+}
+
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) 
+{
+		float3 white = make_float3(0.950456f, 1.0f, 1.089058f);
+		
+		float3 color = make_float3(p_R, p_G, p_B);
+		
+		float3 Luv = XYZ_to_Luv(color, white);
+		
+		float3 LCH = Luv_to_LCHuv(Luv);
+		
+		return LCH;
+}
